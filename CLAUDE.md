@@ -20,7 +20,7 @@ Three files: `index.html` (DOM: `#board` canvas, side panel with HUD and `#next-
 Key points in `game.js`:
 
 - **State is module-level globals** (`board`, `current`, `next`, `score`, `lines`, `level`, `paused`, `gameOver`, `dropInterval`, `animId`, …), all reset by `init()`, which is also the restart-button handler.
-- **Board** is a `ROWS × COLS` matrix of `0` or a piece type index `1–7`. The same index is used in `PIECES` shapes and as the lookup into `COLORS`, so the cell value encodes the color. Index `0` of both arrays is `null`.
+- **Board** is a `ROWS × COLS` matrix of `0` or a piece type index `1–8` (`8` = the hollow 3×3 "tuerca", spawned with probability `NUT_CHANCE` in `randomPiece`). The same index is used in `PIECES` shapes and as the lookup into `COLORS`, so the cell value encodes the color. Index `0` of both arrays is `null`.
 - **Pieces** are square matrices; `rotateCW` transposes and reverses. `tryRotate` applies simple horizontal wall kicks `[0, -1, 1, -2, 2]` (not SRS).
 - **`collide(shape, ox, oy)`** is the single collision check used by movement, rotation, ghost projection (`ghostY`), and spawn. Cells with `y < 0` are allowed (above the board).
 - **Lock flow**: `lockPiece()` → `merge()` → `clearLines()` (updates score/lines/level/`dropInterval`) → `spawn()`; if the newly spawned piece already collides, `endGame()`.
