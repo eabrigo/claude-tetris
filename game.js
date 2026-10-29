@@ -39,6 +39,7 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -169,7 +170,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -301,4 +302,25 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+function applyTheme(theme, persist) {
+  const light = theme === 'light';
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  themeBtn.textContent = light ? '☾ Modo oscuro' : '☀ Modo claro';
+  themeBtn.setAttribute('aria-pressed', String(light));
+  if (persist) {
+    try { localStorage.setItem('theme', theme); } catch (e) {}
+  }
+  // redibuja para que el canvas refleje el tema aunque el juego esté en pausa o terminado
+  draw();
+  drawNext();
+}
+
+themeBtn.addEventListener('click', () => {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  applyTheme(isLight ? 'dark' : 'light', true);
+  themeBtn.blur(); // evita que Espacio vuelva a activar el botón
+});
+
 init();
+applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
