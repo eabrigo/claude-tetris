@@ -58,7 +58,7 @@ jobs:
             Aplica las etiquetas pertinentes con `gh issue edit ${{ github.event.issue.number }} --add-label "<nombre>"`. IMPORTANTE: solo AÑADE etiquetas, nunca elimines etiquetas existentes (ni las que haya puesto una persona ni las que haya puesto este mismo workflow en una ejecución anterior).
 
             ## Paso 5: Publicar el diagnóstico
-            Publica UN único comentario nuevo en el issue con `gh issue comment ${{ github.event.issue.number }} --body "..."` (no edites comentarios existentes). Si la acción del evento es "edited", indica al inicio del comentario que es un diagnóstico actualizado tras la edición del issue. El comentario debe estar en español y tener esta estructura en Markdown:
+            Publica UN único comentario nuevo en el issue con `gh issue comment ${{ github.event.issue.number }} --body "..."` (no edites comentarios existentes). Si la acción del evento es "edited", indica al inicio del comentario que es un diagnóstico actualizado tras la edición del issue. El comentario debe estar en español, redactado en formato Markdown válido y bien soportado por el renderizador de GitHub (encabezados `##`, negritas `**texto**`, listas, bloques de código con triple backtick cuando corresponda; nada de HTML crudo ni sintaxis no estándar), y tener esta estructura:
 
             ```
             ## Diagnóstico general
