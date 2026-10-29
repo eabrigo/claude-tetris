@@ -1,0 +1,79 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+concurrency:
+  group: claude-issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    if: github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage issue with Claude
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*)"'
+          prompt: |
+            Eres un asistente de triage para un repositorio de un juego de Tetris en JavaScript vanilla (sin dependencias, sin build, sin tests). Tu única tarea es ANALIZAR el issue #${{ github.event.issue.number }} (acción del evento: "${{ github.event.action }}"), asignarle las etiquetas correctas y publicar un diagnóstico general. NO escribas código, NO propongas diffs, NO abras pull requests.
+
+            ## Paso 1: Leer el issue
+            Ejecuta `gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments` para obtener el título, cuerpo, etiquetas actuales y comentarios existentes del issue.
+
+            ## Paso 2: Clasificar
+            Usa como referencia la arquitectura del proyecto (ver CLAUDE.md en la raíz del repo): el juego vive en `game.js` (estado global, `collide()` para colisiones, `rotateCW`/`tryRotate` para rotación con wall kicks simples, flujo de bloqueo `lockPiece → merge → clearLines → spawn`, bucle `requestAnimationFrame` con `dropAccum`/`dropInterval`, fórmulas de puntuación/nivel/velocidad), `index.html` (DOM, tamaños de canvas) y `style.css`.
+
+            Clasifica el issue eligiendo las etiquetas que correspondan de esta lista fija (no inventes etiquetas nuevas):
+            - `bug`: algo no funciona como se espera.
+            - `enhancement`: mejora de algo existente.
+            - `question`: pregunta o duda, no es un problema concreto.
+            - `documentation`: afecta al README, CLAUDE.md u otra documentación.
+            - `needs-info`: el reporte no tiene suficiente información para diagnosticarlo (pasos de reproducción, navegador, etc.).
+            - `good-first-issue`: tarea pequeña y acotada, apta para alguien nuevo en el proyecto.
+            - `area:collision`: relacionado con colisiones, el tablero o `collide()`.
+            - `area:rendering`: relacionado con el dibujado en canvas (`draw*`, `index.html`, `style.css`).
+            - `area:scoring`: relacionado con puntuación, niveles o velocidad de caída.
+            - `area:ui`: relacionado con la interfaz (controles, HUD, overlay, CSS).
+
+            Puedes combinar varias etiquetas (por ejemplo `bug` + `area:collision`). No asignes ninguna etiqueta de tipo (`bug`/`enhancement`/`question`) si el issue no corresponde claramente a ese tipo.
+
+            ## Paso 3: Asegurar que las etiquetas existen
+            Las etiquetas deberían existir ya en el repositorio. Como medida de seguridad, antes de aplicarlas verifica con `gh label list` y, si falta alguna de las etiquetas listadas arriba, créala con `gh label create "<nombre>" --color "<color>" --description "<descripción>" --force` (usa colores neutros tipo `ededed` si no tienes uno mejor). No crees ni elimines ninguna otra etiqueta.
+
+            ## Paso 4: Aplicar las etiquetas
+            Aplica las etiquetas pertinentes con `gh issue edit ${{ github.event.issue.number }} --add-label "<nombre>"`. IMPORTANTE: solo AÑADE etiquetas, nunca elimines etiquetas existentes (ni las que haya puesto una persona ni las que haya puesto este mismo workflow en una ejecución anterior).
+
+            ## Paso 5: Publicar el diagnóstico
+            Publica UN único comentario nuevo en el issue con `gh issue comment ${{ github.event.issue.number }} --body "..."` (no edites comentarios existentes). Si la acción del evento es "edited", indica al inicio del comentario que es un diagnóstico actualizado tras la edición del issue. El comentario debe estar en español y tener esta estructura en Markdown:
+
+            ```
+            ## Diagnóstico general
+
+            **Resumen del problema**: (1-3 frases explicando qué se reporta)
+
+            **Área/archivos probablemente afectados**: (menciona funciones o zonas concretas de game.js/index.html/style.css según corresponda, basándote en la arquitectura descrita en CLAUDE.md)
+
+            **Hipótesis de causa probable**: (explica, a alto nivel y sin código, por qué podría estar ocurriendo)
+
+            **Próximos pasos sugeridos para la implementación**: (lista breve de qué debería investigar o hacer quien implemente la solución; NO incluyas código ni diffs)
+
+            **Etiquetas asignadas**: (lista las etiquetas que aplicaste en el Paso 4)
+            ```
+
+            Si el issue no tiene suficiente información para un diagnóstico (por ejemplo, un bug sin pasos de reproducción), dilo explícitamente en el resumen, aplica la etiqueta `needs-info` y, en "próximos pasos", pide la información que falta en lugar de especular.
+
+            Recuerda: tu trabajo termina aquí. No implementes la solución, no modifiques archivos del repositorio, no crees commits ni pull requests.
